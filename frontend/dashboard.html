@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workspace | CareerPilot AI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="dashboard-page">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">CP</span><span>CareerPilot <em>AI</em></span></a>
+    <div class="account-area">
+      <div class="avatar" id="avatar">?</div>
+      <div class="account-copy"><strong id="user-name">Loading...</strong><span id="user-email"></span></div>
+      <button class="sign-out" id="sign-out" type="button">Sign out</button>
+    </div>
+  </header>
+  <main class="dashboard-shell">
+    <section class="welcome-panel">
+      <p class="eyebrow">Your workspace</p>
+      <h1>Welcome, <span id="welcome-name">there</span>.</h1>
+      <p>Connect your goals to your next opportunity.</p>
+    </section>
+    <section class="dashboard-grid" aria-label="Career tools">
+      <article class="tool-card tool-card-wide"><span class="card-number">01</span><h2>Resume intelligence</h2><p>Upload your resume to see where your experience is already carrying weight.</p><span class="coming-soon">Ready for your resume</span></article>
+      <article class="tool-card"><span class="card-number">02</span><h2>Skill map</h2><p>See the capabilities that can unlock your next move.</p><span class="coming-soon">Coming next</span></article>
+      <article class="tool-card accent-card"><span class="card-number">03</span><h2>Career roadmap</h2><p>Turn a direction into a sequence of achievable steps.</p><span class="coming-soon">Coming next</span></article>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    (async () => {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (!session) { window.location.replace("auth/login.html"); return; }
+      if (!window.isAllowedUser(session.user)) {
+        await window.supabaseClient.auth.signOut();
+        window.location.replace("access-denied.html");
+        return;
+      }
+      const user = session.user;
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "there";
+      document.getElementById("user-name").textContent = name;
+      document.getElementById("welcome-name").textContent = name.split(" ")[0];
+      document.getElementById("user-email").textContent = user.email || "";
+      document.getElementById("avatar").textContent = name.charAt(0).toUpperCase();
+      document.getElementById("sign-out").addEventListener("click", async () => {
+        await window.supabaseClient.auth.signOut();
+        window.location.replace("auth/login.html");
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sign in to CareerPilot AI" />
+  <title>Sign in | CareerPilot AI</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-intro">
+      <a class="brand" href="../index.html" aria-label="CareerPilot AI home">
+        <span class="brand-mark">CP</span>
+        <span>CareerPilot <em>AI</em></span>
+      </a>
+      <div class="intro-copy">
+        <p class="eyebrow">Your next move, clearer</p>
+        <h1>Build a career that moves with you.</h1>
+        <p class="intro-text">Bring your resume, skills, and goals into one focused workspace.</p>
+      </div>
+      <div class="signal-list" aria-label="CareerPilot features">
+        <div><span>01</span><p>Understand your strongest skills</p></div>
+        <div><span>02</span><p>Turn ambition into an actionable roadmap</p></div>
+        <div><span>03</span><p>Find your next role with confidence</p></div>
+      </div>
+    </section>
+
+    <section class="auth-card" aria-labelledby="login-title">
+      <div class="card-kicker">Welcome back</div>
+      <h2 id="login-title">Sign in to your workspace</h2>
+      <p class="card-copy" id="auth-copy">Use your email, password, or Google account to continue.</p>
+      <form class="email-form" id="email-form">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="At least 6 characters" minlength="6" required />
+        <button class="email-button" id="email-submit" type="submit">Sign in with email</button>
+      </form>
+      <button class="mode-link" id="mode-toggle" type="button">Create a new account</button>
+      <div class="divider"><span>or</span></div>
+      <button class="google-button" id="google-login" type="button">
+        <span class="google-icon" aria-hidden="true">G</span>
+        <span>Continue with Google</span>
+      </button>
+      <p class="status" id="auth-status" role="status" aria-live="polite"></p>
+      <p class="fine-print">By continuing, you agree to use CareerPilot AI for your personal career planning.</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script>
+    const button = document.getElementById("google-login");
+    const emailForm = document.getElementById("email-form");
+    const emailSubmit = document.getElementById("email-submit");
+    const modeToggle = document.getElementById("mode-toggle");
+    const loginTitle = document.getElementById("login-title");
+    const authCopy = document.getElementById("auth-copy");
+    const status = document.getElementById("auth-status");
+    let isSignUp = false;
+
+    const setStatus = (message, isError = false) => {
+      status.textContent = message;
+      status.className = `status${isError ? " error" : ""}`;
+    };
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      setStatus("Connecting to Google...");
+
+      const { error } = await window.supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/index.html`,
+        },
+      });
+
+      if (error) {
+        button.disabled = false;
+        setStatus(error.message, true);
+      }
+    });
+
+    emailForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      emailSubmit.disabled = true;
+      modeToggle.disabled = true;
+      setStatus(isSignUp ? "Creating your account..." : "Checking your account...");
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const result = isSignUp
+        ? await window.supabaseClient.auth.signUp({ email, password })
+        : await window.supabaseClient.auth.signInWithPassword({ email, password });
+
+      if (result.error) {
+        emailSubmit.disabled = false;
+        modeToggle.disabled = false;
+        setStatus(result.error.message, true);
+        return;
+      }
+
+      if (isSignUp && !result.data.session) {
+        emailSubmit.disabled = false;
+        modeToggle.disabled = false;
+        setStatus("Account created. Check your email to confirm your address.");
+        return;
+      }
+
+      window.location.replace("../dashboard.html");
+    });
+
+    modeToggle.addEventListener("click", () => {
+      isSignUp = !isSignUp;
+      loginTitle.textContent = isSignUp ? "Create your workspace" : "Sign in to your workspace";
+      authCopy.textContent = isSignUp ? "Create an account with your email and a password." : "Use your email, password, or Google account to continue.";
+      emailSubmit.textContent = isSignUp ? "Create account" : "Sign in with email";
+      modeToggle.textContent = isSignUp ? "Already have an account? Sign in" : "Create a new account";
+      document.getElementById("password").autocomplete = isSignUp ? "new-password" : "current-password";
+      setStatus("");
+    });
+
+    window.supabaseClient.auth.getSession().then(({ data }) => {
+      if (!data.session) return;
+      if (window.isAllowedUser(data.session.user)) {
+        window.location.replace("../dashboard.html");
+      } else {
+        window.supabaseClient.auth.signOut();
+        setStatus("This Google account is not approved for access.", true);
+      }
+    });
+  </script>
+</body>
+</html>
